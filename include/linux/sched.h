@@ -105,7 +105,7 @@ struct task_struct {
 /* ldt for this task 0 - zero 1 - cs 2 - ds&ss */
 	struct desc_struct ldt[3];
 /* tss for this task */
-	struct tss_struct tss;
+	struct tss_struct tss[10];
 };
 
 /*
@@ -127,12 +127,12 @@ struct task_struct {
 /* ldt */	{0x9f,0xc0fa00}, \
 		{0x9f,0xc0f200}, \
 	}, \
-/*tss*/	{0,PAGE_SIZE+(long)&init_task,0x10,0,0,0,0,(long)&pg_dir,\
+/*tss*/	{{0,PAGE_SIZE+(long)&init_task,0x10,0,0,0,0,(long)&pg_dir,\
 	 0,0,0,0,0,0,0,0, \
 	 0,0,0x17,0x17,0x17,0x17,0x17,0x17, \
 	 _LDT(0),0x80000000, \
 		{} \
-	}, \
+	},}, \
 }
 
 extern struct task_struct *task[NR_TASKS];
