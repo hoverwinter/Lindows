@@ -58,13 +58,13 @@ sa_mask = 4
 sa_flags = 8
 sa_restorer = 12
 
-nr_system_calls = 72
+nr_system_calls = 73
 
 /*
  * Ok, I get parallel printer interrupts while using the floppy for some
  * strange reason. Urgel. Now I just ignore them.
  */
-.globl system_call,sys_fork,timer_interrupt,sys_execve
+.globl system_call,sys_fork,timer_interrupt,sys_execve,sys_make_thread
 .globl hd_interrupt,floppy_interrupt,parallel_interrupt
 .globl device_not_available, coprocessor_error
 
@@ -217,6 +217,17 @@ sys_fork:
 	call copy_process
 	addl $20,%esp
 1:	ret
+
+.align 2
+sys_make_thread:
+	push %gs
+	pushl %esi
+	pushl %edi
+	pushl %ebp
+	pushl %eax
+	call init_tss
+	addl $20,%esp
+	ret
 
 hd_interrupt:
 	pushl %eax
