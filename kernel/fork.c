@@ -83,6 +83,12 @@ int copy_process(int nr,long ebp,long edi,long esi,long gs,long none,
 	p->state = TASK_UNINTERRUPTIBLE;
 	p->pid = last_pid;
 	p->thread_number = 0;
+	p->thread_inuse = 0;
+	for(i=0;i<10;i++)
+	{
+		p->thread_state[i] = 0;
+	}
+	p->thread_state[0] = 1;
 	p->father = current->pid;
 	p->counter = p->priority;
 	p->signal = 0;

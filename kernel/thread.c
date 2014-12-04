@@ -13,14 +13,22 @@ int init_tss(int eax,long ebp,long edi,long esi,long gs,
 	char * p = (char*) get_free_page();
 	if (!p)
 		return -EAGAIN;
-	current->thread_number += 1;
-	i = current->thread_number;
+	for(i=0;i<10;i++)
+	{
+		if(current->thread_state[i] == 0)
+		{
+			current->thread_number += 1;
+			current->thread_state[i] = 1;
+			break;
+		}
+	}
 	if(i > 9)
 	{
 		panic("Don't try to get more threads than 10!\n");
 	}
-	printk("%d\n",cs);
-	printk("%d\n",current->thread_number);
+	// printk("%d\n",cs);
+	printk("Thread number:%d\n",current->thread_number);
+	printk("Thread in use:%d\n",current->thread_inuse);
 
 	current->tss[i].back_link = 0;
 	current->tss[i].esp0 = PAGE_SIZE + (long) p;
