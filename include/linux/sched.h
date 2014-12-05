@@ -36,6 +36,7 @@ extern void trap_init(void);
 volatile void panic(const char * str);
 #endif
 extern int tty_write(unsigned minor,char * buf,int count);
+extern int thread_schedule(struct task_struct *p);
 
 typedef int (*fn_ptr)();
 

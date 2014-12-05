@@ -3,6 +3,7 @@
 #include <asm/segment.h>
 #include <asm/system.h>
 #include <errno.h>
+
 int get_task_nr(struct task_struct *p)
 {
 	int i;
@@ -72,9 +73,30 @@ int init_tss(int eax,long ebp,long edi,long esi,long gs,long none,
 	// 	ebx,ecx,edx,
 	// 	fs,es,ds,
 	// 	ebx,cs,eflags,ecx,ss);
-	current->thread_inuse = 1;
+	// current->thread_inuse = 1;
 	schedule();
 	return i;
+}
+
+int thread_schedule(struct task_struct *p)
+{
+	int i;
+	if(p != NULL)
+	{
+		if(p->thread_number == 0) return 1;
+		i = (p->thread_inuse + 1)%10;
+		while(1)
+		{
+			if(p->thread_state[i] == 1 && p->thread_inuse!= i)
+			{
+				p->thread_inuse = i;
+				printk("Thread Schedule: %d\n",i);
+				return i;
+			}
+			i = (i+1) % 10;
+		}
+	}
+	return 0;
 }
 
 void thread_cancel(int tid)

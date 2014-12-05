@@ -139,6 +139,7 @@ void schedule(void)
 						(*p)->priority;
 	}
 	/*这部分是线程调度*/
+	thread_schedule(task[next]);
 	if(task[next]->thread_inuse != 0 && task[next]->pid == current->pid)
 	{
 		printk("\n\n\t***HERE next=%d****\n\n",next);
