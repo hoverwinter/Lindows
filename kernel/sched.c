@@ -135,11 +135,15 @@ void schedule(void)
 		if (c) break;
 		for(p = &LAST_TASK ; p > &FIRST_TASK ; --p)
 			if (*p)
+			{
 				(*p)->counter = ((*p)->counter >> 1) +
 						(*p)->priority;
+				thread_schedule(*p);
+			}
 	}
 	/*这部分是线程调度*/
-	// thread_schedule(task[next]);
+	// printk("Current thread:%d\n",current->thread_inuse);
+	thread_schedule(task[next]);
 	if(task[next]->thread_inuse != 0 && task[next]->pid == current->pid)
 	{
 		// printk("\n\t***HERE schedule(): next=%d****\n",next);

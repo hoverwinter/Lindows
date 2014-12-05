@@ -9,8 +9,9 @@
 int memtest(int times)
 {
 	int i,j,flag=1,tmp,counter=0;
-	printf("memtest times=%d\n",times);
 	unsigned char * p = (unsigned char*) malloc(MEM_SIZE*sizeof(unsigned char));
+	printf("memtest times=%d\n",times);
+	fflush(stdout);
 	for(i=0;i<times;i++)
 	{
 		for(j=0;j<MEM_SIZE;j++)
@@ -46,7 +47,7 @@ int memtest(int times)
 
 int main()
 {
-	int times,num,i;
+	int times,num,i =0;
 	char tmp[10];
 	int tid[10];
 	int result[10];
@@ -75,10 +76,11 @@ int main()
 		}
 		if(strcmp(tmp,"go") == 0)
 		{
-			for(i=0;i<num;i++)
+			/* for(i=0;i<num;i++)*/
 				pthread_create(&tid[i],memtest,times);
-			// for(i=0;i<num;i++)
-			// 	pthread_join(tid[i],&result[i]);
+			/* for(i=0;i<num;i++)*/
+				printf("tid[i]=%d",tid[i]);
+				/*pthread_join(tid[i],&result[i]);*/
 			for(i=0;i<num;i++)
 				printf("Result:%d\n",result[i]);
 			continue;

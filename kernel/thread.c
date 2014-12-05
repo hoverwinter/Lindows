@@ -31,7 +31,7 @@ int init_tss(int eax,long ebp,long edi,long esi,long gs,long none,
 		if(current->thread_state[i] == THREAD_NOUSING)
 		{
 			current->thread_number += 1;
-			current->thread_state[i] = 1;
+			current->thread_state[i] = THREAD_RUNNING;
 			break;
 		}
 	}
@@ -71,6 +71,7 @@ int init_tss(int eax,long ebp,long edi,long esi,long gs,long none,
 int thread_schedule(struct task_struct *p)
 {
 	int i;
+	long eip_tmp;
 	if(p != NULL)
 	{
 		if(p->thread_number == 0) return 1;
@@ -79,8 +80,14 @@ int thread_schedule(struct task_struct *p)
 		{
 			if(p->thread_state[i] == THREAD_RUNNING && p->thread_inuse!= i)
 			{
+				__asm__(
+					"call GetIP\n\t"
+					"GetIP:\n\t"
+					"pop %%eax\n\t" 
+					:"=a" (eip_tmp):); 
+				current->tss[current->thread_inuse].eip = eip_tmp;
 				p->thread_inuse = i;
-				printk("Thread schedule result: %d\n",i);
+				// printk("Thread schedule result: %d\n",i);
 				return i;
 			}
 			i = (i+1) % 10;
