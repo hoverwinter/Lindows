@@ -18,6 +18,14 @@ int init_tss(int eax,long ebp,long edi,long esi,long gs,long none,
 		long eip,long cs,long eflags,long esp,long ss)
 {
 	int i;
+	// printk("\n\tREGS OF CPU\nSS   :%d",ss);
+	// printk("\nESP  :%d",esp);
+	// printk("\nCS   :%d",cs);
+	// printk("\nEIP  :%d",eip);
+	// printk("\nEAX  :%d",eax);
+	// printk("\nEBX  :%d",ebx);
+	// printk("\nECX  :%d",ecx);
+	// printk("\nEDX  :%d\n",edx);
 	char * p = (char*) get_free_page();
 	if (!p)
 		return -EAGAIN;
@@ -34,9 +42,9 @@ int init_tss(int eax,long ebp,long edi,long esi,long gs,long none,
 	{
 		panic("Don't try to get more threads than 10!\n");
 	}
-	printk("Thread number:%d\n",current->thread_number);
-	printk("Thread in use:%d\n",current->thread_inuse);
-	printk("Thread finded:%d\n",i);
+	// printk("Thread number:%d\n",current->thread_number);
+	// printk("Thread in use:%d\n",current->thread_inuse);
+	// printk("Thread finded:%d\n",i);
 	current->tss[i].back_link = 0;
 	current->tss[i].esp0 = PAGE_SIZE + (long) p;
 	current->tss[i].ss0 = 0x10;
@@ -75,7 +83,7 @@ int thread_schedule(struct task_struct *p)
 			if(p->thread_state[i] == 1 && p->thread_inuse!= i)
 			{
 				p->thread_inuse = i;
-				printk("Thread schedule: %d\n",i);
+				// printk("Thread schedule result: %d\n",i);
 				return i;
 			}
 			i = (i+1) % 10;
@@ -107,6 +115,7 @@ void sys_thread_cancel(int tid)
 
 void sys_thread_exit(int value)
 {
+	sti();
 	int i;
 	for(i=0;i<10;i++)
 	{
@@ -115,13 +124,16 @@ void sys_thread_exit(int value)
 	}
 	printk("Return value from syscall:%d\n",value);
 	current->thread_retval[current->thread_inuse] = value;
+	cli();
 	sys_thread_cancel(current->thread_inuse);
 }
 
 void sys_thread_join(int tid, int* value_ptr)
 {
+	printk("Joinn thread state:%d\n",current->thread_state[tid]);
 	if(current->thread_state[tid] == 0)
 	{
+		printk("Join thread retval:%d\n",current->thread_retval[tid]);
 		put_fs_long(current->thread_retval[tid],(unsigned long*)value_ptr);
 		return;
 	}else
