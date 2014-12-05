@@ -122,23 +122,33 @@ void sys_thread_exit(int value)
 		if(current->thread_state[i] == 2)
 			current->thread_state[i] = 1;
 	}
-	printk("Return value from syscall:%d\n",value);
+	// printk("Return value from syscall:%d\n",value);
 	current->thread_retval[current->thread_inuse] = value;
 	cli();
 	sys_thread_cancel(current->thread_inuse);
 }
 
+/*  I'm indeed prond of my design of the following function  
+*	保留最初始版本，对比即可知道这样写的好处：充分利用 调度
+*/
 void sys_thread_join(int tid, int* value_ptr)
 {
-	printk("Joinn thread state:%d\n",current->thread_state[tid]);
+	// printk("Join thread state:%d\n",current->thread_state[tid]);
+	// if(current->thread_state[tid] == 1)
+	// {
+	// 	printk("Join thread retval:%d\n",current->thread_retval[tid]);
+	// 	put_fs_long(current->thread_retval[tid],(unsigned long*)value_ptr);
+	// 	return;
+	// }else
+	// {
+	// 	current->thread_state[current->thread_inuse] == 2;
+	// 	schedule();
+	// }
 	if(current->thread_state[tid] == 0)
-	{
-		printk("Join thread retval:%d\n",current->thread_retval[tid]);
-		put_fs_long(current->thread_retval[tid],(unsigned long*)value_ptr);
-		return;
-	}else
 	{
 		current->thread_state[current->thread_inuse] == 2;
 		schedule();
 	}
+	// printk("Join thread retval:%d\n",current->thread_retval[tid]);
+	put_fs_long(current->thread_retval[tid],(unsigned long*)value_ptr);
 }
