@@ -9,6 +9,7 @@
 int memtest(int times)
 {
 	int i,j,flag=1,tmp,counter=0;
+	printf("memtest times=%d\n",times);
 	unsigned char * p = (unsigned char*) malloc(MEM_SIZE*sizeof(unsigned char));
 	for(i=0;i<times;i++)
 	{

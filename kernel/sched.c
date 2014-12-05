@@ -139,10 +139,10 @@ void schedule(void)
 						(*p)->priority;
 	}
 	/*这部分是线程调度*/
-	thread_schedule(task[next]);
+	// thread_schedule(task[next]);
 	if(task[next]->thread_inuse != 0 && task[next]->pid == current->pid)
 	{
-		printk("\n\t***HERE schedule(): next=%d****\n",next);
+		// printk("\n\t***HERE schedule(): next=%d****\n",next);
 		set_tss_desc(gdt+(next<<1)+FIRST_TSS_ENTRY,&(task[next]->tss[task[next]->thread_inuse]));
 		set_ldt_desc(gdt+(next<<1)+FIRST_LDT_ENTRY,&(task[next]->ldt));
 		/*线程切换*/

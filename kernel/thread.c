@@ -112,7 +112,7 @@ void sys_thread_cancel(int tid)
 
 void sys_thread_exit(int value)
 {
-	sti();
+	cli();
 	/*唤醒所有等待此线程的其他线程*/
 	int i;
 	for(i=0;i<10;i++)
@@ -122,8 +122,8 @@ void sys_thread_exit(int value)
 	}
 	// printk("Return value from syscall:%d\n",value);
 	current->thread_retval[current->thread_inuse] = value;
-	cli();
 	sys_thread_cancel(current->thread_inuse);
+	sti();
 }
 
 /*  I'm indeed prond of my design of the following function  
