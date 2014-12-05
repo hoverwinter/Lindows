@@ -28,7 +28,7 @@
 
 extern int copy_page_tables(unsigned long from, unsigned long to, long size);
 extern int free_page_tables(unsigned long from, unsigned long size);
-
+extern int get_task_nr(struct task_struct *p);
 extern void sched_init(void);
 extern void schedule(void);
 extern void trap_init(void);

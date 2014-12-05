@@ -103,9 +103,9 @@ void math_state_restore()
  */
 void schedule(void)
 {
-	int i,next,c;
+	int i,next,c,nr;
 	struct task_struct ** p;
-
+	struct {long a,b;} __tmp;
 /* check alarm, wake up any interruptible tasks that have got a signal */
 
 	for(p = &LAST_TASK ; p > &FIRST_TASK ; --p)
@@ -138,7 +138,22 @@ void schedule(void)
 				(*p)->counter = ((*p)->counter >> 1) +
 						(*p)->priority;
 	}
-	switch_to(next);
+	/*这部分是线程调度*/
+	if(task[next]->thread_inuse != 0 && task[next]->pid == current->pid)
+	{
+		printk("\n\n\t***HERE next=%d****\n\n",next);
+		set_tss_desc(gdt+(next<<1)+FIRST_TSS_ENTRY,&(task[next]->tss[task[next]->thread_inuse]));
+		set_ldt_desc(gdt+(next<<1)+FIRST_LDT_ENTRY,&(task[next]->ldt));
+		/*线程切换*/
+		__asm__(
+		"movw %%dx,%1\n\t" 
+		"ljmp *%0\n\t" 
+		::"m" (*&__tmp.a),"m" (*&__tmp.b), 
+		"d" (_TSS(next))); 
+	}else
+	{
+		switch_to(next);
+	}
 }
 
 int sys_pause(void)
