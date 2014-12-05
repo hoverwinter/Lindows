@@ -17,15 +17,7 @@ int init_tss(int eax,long ebp,long edi,long esi,long gs,long none,
 		long fs,long es,long ds,
 		long eip,long cs,long eflags,long esp,long ss)
 {
-	int i,nr;
-	printk("eax=%p\n",ebx);
-	printk("ebx=%p\n",ebx);
-	printk("ecx=%p\n",ecx);
-	printk("edx=%p\n",edx);
-	printk("eip=%p\n",eip);
-	printk("ss=%p\n",ss);
-	printk("cs=%p\n",cs);
-	printk("esp=%p\n",esp);
+	int i;
 	char * p = (char*) get_free_page();
 	if (!p)
 		return -EAGAIN;
@@ -67,13 +59,6 @@ int init_tss(int eax,long ebp,long edi,long esi,long gs,long none,
 	current->tss[i].ldt = current->tss[0].ldt;
 	current->tss[i].trace_bitmap = 0x80000000;
 	current->tss[i].i387 = current->tss[0].i387;
-	// printk("Task struct:%d\n",get_task_nr(current));
-	// nr = get_task_nr(current);
-	// copy_process(10,edx,edi,esi,gs,none,
-	// 	ebx,ecx,edx,
-	// 	fs,es,ds,
-	// 	ebx,cs,eflags,ecx,ss);
-	// current->thread_inuse = 1;
 	schedule();
 	return i;
 }
@@ -90,7 +75,7 @@ int thread_schedule(struct task_struct *p)
 			if(p->thread_state[i] == 1 && p->thread_inuse!= i)
 			{
 				p->thread_inuse = i;
-				printk("Thread Schedule: %d\n",i);
+				printk("Thread schedule: %d\n",i);
 				return i;
 			}
 			i = (i+1) % 10;
@@ -99,7 +84,7 @@ int thread_schedule(struct task_struct *p)
 	return 0;
 }
 
-void thread_cancel(int tid)
+void sys_thread_cancel(int tid)
 {
 	if(tid==0)
 	{
@@ -111,17 +96,37 @@ void thread_cancel(int tid)
 	{
 		printk("BAD BAD: try to cancel useless thread!\n");
 	}
+	if(current->thread_number == 0)
+	{
+		printk("BAD BAD: no more thread to cancel!");
+	}
 	current->thread_state[tid] = 0;
 	current->thread_number -= 1;
 	schedule();
 }
 
-void thread_exit(long value_ptr)
+void sys_thread_exit(int value)
 {
-	
+	int i;
+	for(i=0;i<10;i++)
+	{
+		if(current->thread_state[i] == 2)
+			current->thread_state[i] = 1;
+	}
+	printk("Return value from syscall:%d\n",value);
+	current->thread_retval[current->thread_inuse] = value;
+	sys_thread_cancel(current->thread_inuse);
 }
 
-void thread_join(int tid, void** value_ptr)
+void sys_thread_join(int tid, int* value_ptr)
 {
-
+	if(current->thread_state[tid] == 0)
+	{
+		put_fs_long(current->thread_retval[tid],(unsigned long*)value_ptr);
+		return;
+	}else
+	{
+		current->thread_state[current->thread_inuse] == 2;
+		schedule();
+	}
 }

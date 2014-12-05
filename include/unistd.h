@@ -130,6 +130,9 @@
 #define __NR_setreuid	70
 #define __NR_setregid	71
 #define __NR_make_thread 72
+#define __NR_thread_cancel 73
+#define __NR_thread_exit 74
+#define __NR_thread_join 75
 
 #define _syscall0(type,name) \
 type name(void) \
