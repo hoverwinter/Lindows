@@ -4,13 +4,10 @@
 #include <asm/system.h>
 #include <errno.h>
 
-int get_task_nr(struct task_struct *p)
-{
-	int i;
-	for(i=0 ; i<NR_TASKS ; i++)
-			if (task[i] && task[i]->pid == p->pid) return i;
-	return -1;
-}
+#define THREAD_NOUSING 0
+#define THREAD_RUNNING 1
+#define THREAD_WAITING 2
+
 /*参数none: sys_make_thread返回地址*/
 int init_tss(int eax,long ebp,long edi,long esi,long gs,long none,
 		long ebx,long ecx,long edx,
@@ -31,7 +28,7 @@ int init_tss(int eax,long ebp,long edi,long esi,long gs,long none,
 		return -EAGAIN;
 	for(i=0;i<10;i++)
 	{
-		if(current->thread_state[i] == 0)
+		if(current->thread_state[i] == THREAD_NOUSING)
 		{
 			current->thread_number += 1;
 			current->thread_state[i] = 1;
@@ -42,9 +39,9 @@ int init_tss(int eax,long ebp,long edi,long esi,long gs,long none,
 	{
 		panic("Don't try to get more threads than 10!\n");
 	}
-	// printk("Thread number:%d\n",current->thread_number);
-	// printk("Thread in use:%d\n",current->thread_inuse);
-	// printk("Thread finded:%d\n",i);
+	printk("Thread number:%d\n",current->thread_number);
+	printk("Thread in use:%d\n",current->thread_inuse);
+	printk("Thread finded:%d\n",i);
 	current->tss[i].back_link = 0;
 	current->tss[i].esp0 = PAGE_SIZE + (long) p;
 	current->tss[i].ss0 = 0x10;
@@ -55,7 +52,7 @@ int init_tss(int eax,long ebp,long edi,long esi,long gs,long none,
 	current->tss[i].edx = edx;
 	current->tss[i].ebx = ebx;
 	current->tss[i].esp = ecx;
-	current->tss[i].ebp = edx;
+	current->tss[i].ebp = ecx;
 	current->tss[i].esi = esi;
 	current->tss[i].edi = edi;
 	current->tss[i].es = es & 0xffff;
@@ -80,10 +77,10 @@ int thread_schedule(struct task_struct *p)
 		i = (p->thread_inuse + 1)%10;
 		while(1)
 		{
-			if(p->thread_state[i] == 1 && p->thread_inuse!= i)
+			if(p->thread_state[i] == THREAD_RUNNING && p->thread_inuse!= i)
 			{
 				p->thread_inuse = i;
-				// printk("Thread schedule result: %d\n",i);
+				printk("Thread schedule result: %d\n",i);
 				return i;
 			}
 			i = (i+1) % 10;
@@ -100,7 +97,7 @@ void sys_thread_cancel(int tid)
 	}else if(tid < 0 || tid > 9)
 	{
 		panic("Invaliable thread!\n");
-	}else if(current->thread_state[tid] == 0)
+	}else if(current->thread_state[tid] == THREAD_NOUSING)
 	{
 		printk("BAD BAD: try to cancel useless thread!\n");
 	}
@@ -108,7 +105,7 @@ void sys_thread_cancel(int tid)
 	{
 		printk("BAD BAD: no more thread to cancel!");
 	}
-	current->thread_state[tid] = 0;
+	current->thread_state[tid] = THREAD_NOUSING;
 	current->thread_number -= 1;
 	schedule();
 }
@@ -116,11 +113,12 @@ void sys_thread_cancel(int tid)
 void sys_thread_exit(int value)
 {
 	sti();
+	/*唤醒所有等待此线程的其他线程*/
 	int i;
 	for(i=0;i<10;i++)
 	{
-		if(current->thread_state[i] == 2)
-			current->thread_state[i] = 1;
+		if(current->thread_state[i] == current->thread_inuse*10 + THREAD_WAITING)
+			current->thread_state[i] = THREAD_RUNNING;
 	}
 	// printk("Return value from syscall:%d\n",value);
 	current->thread_retval[current->thread_inuse] = value;
@@ -134,7 +132,7 @@ void sys_thread_exit(int value)
 void sys_thread_join(int tid, int* value_ptr)
 {
 	// printk("Join thread state:%d\n",current->thread_state[tid]);
-	// if(current->thread_state[tid] == 1)
+	// if(current->thread_state[tid] == 0)
 	// {
 	// 	printk("Join thread retval:%d\n",current->thread_retval[tid]);
 	// 	put_fs_long(current->thread_retval[tid],(unsigned long*)value_ptr);
@@ -144,9 +142,10 @@ void sys_thread_join(int tid, int* value_ptr)
 	// 	current->thread_state[current->thread_inuse] == 2;
 	// 	schedule();
 	// }
-	if(current->thread_state[tid] == 0)
+	if(current->thread_state[tid] == THREAD_RUNNING)
 	{
-		current->thread_state[current->thread_inuse] == 2;
+		/*等待状态中加入等待的thread标志*/
+		current->thread_state[current->thread_inuse] == tid*10 + THREAD_WAITING;
 		schedule();
 	}
 	// printk("Join thread retval:%d\n",current->thread_retval[tid]);
