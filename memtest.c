@@ -60,6 +60,7 @@ int main()
 		"\tgo: start test\n"
 		"\tabort: cancel thread\n"
 		"\tstatus: show test status\n"
+		"\texit: exit the program\n"
 		"\tthread n: create n threads to test\n"
 		"\ttimes n: each mem unit tests n times\n"
 		"Default: 1 times and 2 threads\n"
