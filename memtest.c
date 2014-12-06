@@ -53,6 +53,7 @@ int main()
 	int result[10];
 	times = num = 1;
 	printf("Usage:\n");
+	fflush(stdout);
 	while(1)
 	{
 		printf(">>>");
@@ -76,21 +77,25 @@ int main()
 		}
 		if(strcmp(tmp,"go") == 0)
 		{
-			/* for(i=0;i<num;i++)*/
-				pthread_create(&tid[i],memtest,times);
-			/* for(i=0;i<num;i++)*/
-				printf("tid[i]=%d",tid[i]);
-				/*pthread_join(tid[i],&result[i]);*/
 			for(i=0;i<num;i++)
-				printf("Result:%d\n",result[i]);
+			{
+				pthread_create(&tid[i],memtest,times);
+				/*pthread_join(tid[i],&result[i]);*/
+			}
 			continue;
 		}
 		if(strcmp(tmp,"status") == 0)
 		{
+			for(i=0;i<num;i++)
+				printf("Result:%d\n",result[i]);
 			continue;
 		}
 		if(strcmp(tmp,"abort") == 0)
 		{
+			for(i=0;i<num;i++)
+			{
+				pthread_cancel(tid[i]);
+			}
 			continue;
 		}
 	}

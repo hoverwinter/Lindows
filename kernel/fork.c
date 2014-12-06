@@ -89,6 +89,7 @@ int copy_process(int nr,long ebp,long edi,long esi,long gs,long none,
 	{
 		p->thread_state[i] = 0;
 		p->thread_retval[i] = 0;
+		p->thread_counter[i] = p->priority;
 	}
 	p->thread_state[0] = 1;
 	/*  ******* */

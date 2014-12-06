@@ -138,7 +138,7 @@ void schedule(void)
 			{
 				(*p)->counter = ((*p)->counter >> 1) +
 						(*p)->priority;
-				thread_schedule(*p);
+				// thread_schedule(*p);
 			}
 	}
 	/*这部分是线程调度*/
@@ -349,8 +349,11 @@ void do_timer(long cpl)
 	}
 	if (current_DOR & 0xf0)
 		do_floppy_timer();
-	if ((--current->counter)>0) return;
+	if ((--current->counter)>0 && 
+		(--current->thread_counter[current->thread_inuse])>0
+		) return;
 	current->counter=0;
+	current->thread_counter[current->thread_inuse] = 0;
 	if (!cpl) return;
 	schedule();
 }

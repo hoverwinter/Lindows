@@ -14,7 +14,7 @@ int pthread_create(pthread_t* tid,fn_ptr start_routine, int arg)
 	*(p+STACK_SIZE-1) = arg;
 	/*   *(p+STACK_SIZE-2): Return Address
 	*/
-	*tid = make_thread(start_routine,p+STACK_SIZE-2);
+	*tid = make_thread(start_routine,(long)(p+STACK_SIZE-2));
 	if(*tid > 0 && *tid <10)
 		return 0;
 	return -1;

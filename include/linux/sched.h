@@ -36,7 +36,7 @@ extern void trap_init(void);
 volatile void panic(const char * str);
 #endif
 extern int tty_write(unsigned minor,char * buf,int count);
-extern int thread_schedule(struct task_struct *p);
+extern void thread_schedule(struct task_struct *p);
 
 typedef int (*fn_ptr)();
 
@@ -89,7 +89,7 @@ struct task_struct {
 /* various fields */
 	int exit_code;
 	unsigned long start_code,end_code,end_data,brk,start_stack;
-	int thread_number,thread_inuse,thread_state[10],thread_retval[10];
+	int thread_number,thread_inuse,thread_state[10],thread_retval[10],thread_counter[10];
 	long pid,father,pgrp,session,leader;
 	unsigned short uid,euid,suid;
 	unsigned short gid,egid,sgid;
@@ -118,7 +118,7 @@ struct task_struct {
 /* state etc */	{ 0,15,15, \
 /* signals */	0,{{},},0, \
 /* ec,brk... */	0,0,0,0,0,0, \
-/* thread_number...*/ 0,0,{1,0,},{0,0,},\
+/* thread_number...*/ 0,0,{1,0,},{0,0,},{15,0,},\
 /* pid etc.. */	0,-1,0,0,0, \
 /* uid etc */	0,0,0,0,0,0, \
 /* alarm */	0,0,0,0,0,0, \
