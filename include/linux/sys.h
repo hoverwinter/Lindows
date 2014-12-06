@@ -74,6 +74,8 @@ extern int sys_make_thread();
 extern void sys_thread_cancel();
 extern void sys_thread_exit();
 extern void sys_thread_join();
+extern int sys_thread_status();
+extern int sys_thread_gettid();
 
 fn_ptr sys_call_table[] = { sys_setup, sys_exit, sys_fork, sys_read,
 sys_write, sys_open, sys_close, sys_waitpid, sys_creat, sys_link,
@@ -87,4 +89,5 @@ sys_getgid, sys_signal, sys_geteuid, sys_getegid, sys_acct, sys_phys,
 sys_lock, sys_ioctl, sys_fcntl, sys_mpx, sys_setpgid, sys_ulimit,
 sys_uname, sys_umask, sys_chroot, sys_ustat, sys_dup2, sys_getppid,
 sys_getpgrp, sys_setsid, sys_sigaction, sys_sgetmask, sys_ssetmask,
-sys_setreuid,sys_setregid, sys_make_thread, sys_thread_cancel, sys_thread_exit, sys_thread_join};
+sys_setreuid,sys_setregid, sys_make_thread, sys_thread_cancel,
+sys_thread_exit, sys_thread_join, sys_thread_status, sys_thread_gettid};

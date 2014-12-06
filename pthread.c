@@ -7,6 +7,8 @@ _syscall2(int,make_thread,fn_ptr,func,int,sp);
 _syscall2(void,thread_join,int,tid,int*,retval);
 _syscall1(void,thread_exit,int,retval);
 _syscall1(void,thread_cancel,int,tid);
+_syscall1(int,thread_status,int,tid);
+_syscall0(int,thread_gettid);
 
 int pthread_create(pthread_t* tid,fn_ptr start_routine, int arg)
 {
@@ -33,4 +35,14 @@ void pthread_cancel(int tid)
 void pthread_join(int tid,int* retval)
 {
 	thread_join(tid,retval);
+}
+
+int pthread_status(int tid)
+{
+	return thread_status(tid);
+}
+
+int pthread_gettid()
+{
+	return thread_gettid();
 }

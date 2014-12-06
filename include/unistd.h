@@ -133,6 +133,8 @@
 #define __NR_thread_cancel 73
 #define __NR_thread_exit 74
 #define __NR_thread_join 75
+#define __NR_thread_status 76
+#define __NR_thread_gettid 77
 
 #define _syscall0(type,name) \
 type name(void) \

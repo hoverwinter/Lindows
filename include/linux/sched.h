@@ -2,6 +2,7 @@
 #define _SCHED_H
 
 #define NR_TASKS 64
+#define NR_THREADS 64
 #define HZ 100
 
 #define FIRST_TASK task[0]
@@ -110,6 +111,13 @@ struct task_struct {
 	struct tss_struct tss[10];
 };
 
+struct tcb_struct{
+	long thread_number;
+	long state;	
+	long counter;
+	long priority;
+	struct tss_struct tss;
+};
 /*
  *  INIT_TASK is used to set up the first task table, touch at
  * your own risk!. Base=0, limit=0x9ffff (=640kB)

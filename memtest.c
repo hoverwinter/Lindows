@@ -10,8 +10,7 @@ int memtest(int times)
 {
 	int i,j,flag=1,tmp,counter=0;
 	unsigned char * p = (unsigned char*) malloc(MEM_SIZE*sizeof(unsigned char));
-	printf("memtest times=%d\n",times);
-	fflush(stdout);
+	printf("current thread:%d\n",pthread_gettid());
 	for(i=0;i<times;i++)
 	{
 		for(j=0;j<MEM_SIZE;j++)
@@ -86,6 +85,8 @@ int main()
 		}
 		if(strcmp(tmp,"status") == 0)
 		{
+			for(i=0;i<num;i++)
+				printf("%d:%d\n",tid[i],pthread_status(tid[i]));
 			for(i=0;i<num;i++)
 				printf("Result:%d\n",result[i]);
 			continue;
