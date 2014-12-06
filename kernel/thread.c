@@ -4,9 +4,14 @@
 #include <asm/system.h>
 #include <errno.h>
 
-#define THREAD_NOUSING 0
-#define THREAD_RUNNING 1
-#define THREAD_WAITING 2
+int get_task_nr(long pid,long tid)
+{
+	int i;
+	for(i=0 ; i<NR_TASKS ; i++)
+		if(task[i]->pid == pid && task[i]->tid == tid)
+			return i;
+	return -1;
+}
 
 /*参数none: sys_make_thread返回地址*/
 int init_tss(int eax,long ebp,long edi,long esi,long gs,long none,
@@ -14,184 +19,176 @@ int init_tss(int eax,long ebp,long edi,long esi,long gs,long none,
 		long fs,long es,long ds,
 		long eip,long cs,long eflags,long esp,long ss)
 {
-	int i;
-	// printk("\n\tREGS OF CPU\nSS   :%d",ss);
-	// printk("\nESP  :%d",esp);
-	// printk("\nCS   :%d",cs);
-	// printk("\nEIP  :%d",eip);
-	// printk("\nEAX  :%d",eax);
-	// printk("\nEBX  :%d",ebx);
-	// printk("\nECX  :%d",ecx);
-	// printk("\nEDX  :%d\n",edx);
-	char * p = (char*) get_free_page();
+	int i,nr;
+	struct file *f;
+	struct task_struct * p;
+	p = (struct task_struct *) get_free_page();
 	if (!p)
 		return -EAGAIN;
-	for(i=0;i<10;i++)
-	{
-		if(current->thread_state[i] == THREAD_NOUSING)
-		{
-			current->thread_number += 1;
-			current->thread_state[i] = THREAD_RUNNING;
-			current->thread_counter[i] = current->priority;
+	nr = find_empty_process();
+	task[nr] = p;
+	for(i=0;i<NR_THREADS_PER_TASK;i++)
+		if(current->thread[i]==NULL)
 			break;
-		}
-	}
-	if(i > 9)
+	if(i>NR_THREADS_PER_TASK-1)
 	{
-		panic("Don't try to get more threads than 10!\n");
+		printk("BAD BAD: Thread are limited to 10!\n");
+		return -1;
 	}
-	// printk("Thread number:%d\n",current->thread_number);
-	// printk("Thread in use:%d\n",current->thread_inuse);
-	// printk("Thread finded:%d\n",i);
-	current->tss[i].back_link = 0;
-	current->tss[i].esp0 = PAGE_SIZE + (long) p;
-	current->tss[i].ss0 = 0x10;
-	current->tss[i].eip = ebx;
-	current->tss[i].eflags = eflags;
-	current->tss[i].eax = eax;
-	current->tss[i].ecx = ecx;
-	current->tss[i].edx = edx;
-	current->tss[i].ebx = ebx;
-	current->tss[i].esp = ecx;
-	current->tss[i].ebp = ecx;
-	current->tss[i].esi = esi;
-	current->tss[i].edi = edi;
-	current->tss[i].es = es & 0xffff;
-	current->tss[i].cs = cs & 0xffff;
-	current->tss[i].ss = ss & 0xffff;
-	current->tss[i].ds = ds & 0xffff;
-	current->tss[i].fs = fs & 0xffff;
-	current->tss[i].gs = gs & 0xffff;
-	current->tss[i].ldt = current->tss[0].ldt;
-	current->tss[i].trace_bitmap = 0x80000000;
-	current->tss[i].i387 = current->tss[0].i387;
-	return i;
-}
-
-void thread_schedule(struct task_struct *p)
-{
-	// int i;
-	// if(p != NULL)
-	// {
-	// 	if(p->thread_number == 0) return;
-	// 	i = (p->thread_inuse + 1)%10;
-	// 	while(1)
-	// 	{
-	// 		if(p->thread_state[i] == THREAD_RUNNING && p->thread_inuse!= i)
-	// 		{
-	// 			p->thread_inuse = i;
-	// 			printk("Thread schedule result: %d\n",i);
-	// 			return i;
-	// 		}
-	// 		i = (i+1) % 10;
-	// 	}
-	// }
-	int i,next,c;
-	if(p != NULL)
-	{
-		if(p->thread_number == 0) return;
-		i = 10;
-		while (1) {
-			c = -1;
-			next = 0;
-			i = 10;
-			while ((--i)>-1) {
-				if(p->thread_state[i] == THREAD_NOUSING)
-					continue;
-				if(p->thread_state[i] == THREAD_RUNNING && p->thread_counter[i] > c)
-				{	
-					c = p->thread_counter[i];
-					// printk("c=%d\ti=%d\n",c,i);
-					next = i;
-				}
-			}
-			// printk("outer c = %d\n",c);
-			if (c) break;
-			for(i =0 ; i< 10 ; i++)
-				if(p->thread_state[i] != 0)
-				{
-					p->thread_counter[i] = p->priority + (p->thread_counter[i] >> 1);
-				}
-		}
-		p->thread_inuse = next;
-		// printk("Thread schedule result: %d\n",next);
-	}
+	current->thread[i] = p;
+	*p = *current;
+	p->state = TASK_UNINTERRUPTIBLE;
+	p->pid = current->pid;
+	p->father = current->father;
+	p->counter = p->priority;
+	p->signal = 0;
+	p->alarm = 0;
+	p->leader = 0;		/* process leadership doesn't inherit */
+	p->utime = p->stime = 0;
+	p->cutime = p->cstime = 0;
+	p->start_time = jiffies;
+	p->tid = current->tid_num;
+	p->tid_num = 1;
+	/*tid_num only make effects in Main thread*/
+	current->tid_num += 1;
+	p->tss.back_link = 0;
+	p->tss.esp0 = PAGE_SIZE + (long) p;
+	p->tss.ss0 = 0x10;
+	p->tss.eip = ebx;
+	p->tss.eflags = eflags;
+	p->tss.eax = eax;
+	p->tss.ecx = ecx;
+	p->tss.edx = edx;
+	p->tss.ebx = ebx;
+	p->tss.esp = ecx;
+	p->tss.ebp = ecx;
+	p->tss.esi = esi;
+	p->tss.edi = edi;
+	p->tss.es = es & 0xffff;
+	p->tss.cs = cs & 0xffff;
+	p->tss.ss = ss & 0xffff;
+	p->tss.ds = ds & 0xffff;
+	p->tss.fs = fs & 0xffff;
+	p->tss.gs = gs & 0xffff;
+	p->tss.ldt = current->tss.ldt;
+	p->tss.trace_bitmap = 0x80000000;
+	p->tss.i387 = current->tss.i387;
+	for (i=0; i<NR_OPEN;i++)
+		if ((f=p->filp[i]))
+			f->f_count++;
+	if (current->pwd)
+		current->pwd->i_count++;
+	if (current->root)
+		current->root->i_count++;
+	if (current->executable)
+		current->executable->i_count++;
+	set_tss_desc(gdt+(nr<<1)+FIRST_TSS_ENTRY,&(p->tss));
+	set_ldt_desc(gdt+(nr<<1)+FIRST_LDT_ENTRY,&(p->ldt));
+	p->state = TASK_RUNNING;
+	return p->tid;
 }
 
 void sys_thread_cancel(int tid)
 {
-	cli();
-	if(tid==0)
+	int nr,i;
+	struct task_struct *p;
+	if(tid == current->tid)
 	{
-		panic("Main thread can't be canceled!\n");
-	}else if(tid < 0 || tid > 9)
-	{
-		panic("Invaliable thread!\n");
-	}else if(current->thread_state[tid] == THREAD_NOUSING)
-	{
-		printk("BAD BAD: try to cancel useless thread!\n");
+		printk("BAD BAD: try to cancel self!\n");
+		return;
 	}
-	if(current->thread_number == 0)
+	nr = get_task_nr(current->pid,0);
+	for(i=0;i<NR_THREADS_PER_TASK;i++)
 	{
-		printk("BAD BAD: no more thread to cancel!");
+		if(task[nr]->thread[i]->tid == tid)
+		{
+			p = task[nr]->thread[i];
+		}
 	}
-	current->thread_state[tid] = THREAD_NOUSING;
-	current->thread_number -= 1;
-	sti();
+	p->state = TASK_STOPPED;
+	task[nr]->tid_num -= 1;
+	nr = get_task_nr(current->pid,current->tid);
+	task[nr] = NULL;
+	printk("PID:%d\tTID:%d canceled\n",current->pid,current->tid);
 	schedule();
 }
 
 void sys_thread_exit(int value)
 {
-	cli();
-	/*唤醒所有等待此线程的其他线程*/
-	printk("Thread %d exit!\n",current->thread_inuse);
-	int i;
-	for(i=0;i<10;i++)
+	int nr,i;
+	if(current->tid == 0)
 	{
-		if(current->thread_state[i] == current->thread_inuse*10 + THREAD_WAITING)
-			current->thread_state[i] = THREAD_RUNNING;
+		panic("Error Error: Main thread(tid=0) should never be here!\n");
 	}
-	// printk("Return value from syscall:%d\n",value);
-	current->thread_retval[current->thread_inuse] = value;
-	current->thread_state[current->thread_inuse] = THREAD_NOUSING;
-	current->thread_number -= 1;
-	sti();
+	current->state = TASK_STOPPED;
+	current->exit_code = value;
+	nr = get_task_nr(current->pid,0);
+	for(i=0;i<NR_THREADS_PER_TASK;i++)
+	{
+		if(task[nr]->thread[i]!=NULL)
+		{
+			if(task[nr]->thread[i]->state == current->tid*10 + TASK_UNINTERRUPTIBLE)
+				task[nr]->thread[i]->state = TASK_RUNNING;
+		}
+	}
+	task[nr]->tid_num -= 1;
+	nr = get_task_nr(current->pid,current->tid);
+	task[nr] = NULL;
+	printk("PID:%d\tTID:%d exit\n",current->pid,current->tid);
 	schedule();
 }
 
-/*  I'm indeed prond of my design of the following function  
-*	保留最初始版本，对比即可知道这样写的好处：充分利用 调度
-*/
 void sys_thread_join(int tid, int* value_ptr)
 {
-	// printk("Join thread state:%d\n",current->thread_state[tid]);
-	// if(current->thread_state[tid] == 0)
-	// {
-	// 	printk("Join thread retval:%d\n",current->thread_retval[tid]);
-	// 	put_fs_long(current->thread_retval[tid],(unsigned long*)value_ptr);
-	// 	return;
-	// }else
-	// {
-	// 	current->thread_state[current->thread_inuse] == 2;
-	// 	schedule();
-	// }
-	if(current->thread_state[tid] == THREAD_RUNNING)
+	int nr,i;
+	struct task_struct *p;
+	// nr = get_task_nr(current->pid,tid) this is wrong!
+	nr = get_task_nr(current->pid,0);
+	for(i=0;i<NR_THREADS_PER_TASK;i++)
 	{
-		/*等待状态中加入等待的thread标志*/
-		current->thread_state[current->thread_inuse] == tid*10 + THREAD_WAITING;
+		if(task[nr]->thread[i]->tid==tid)
+		{
+			p = task[nr]->thread[i];
+			break;
+		}
+	}
+	if(p == NULL)
+	{
+		printk("BAD BAD: try to wait for non-existing thread!\n");
+		return;
+	}
+	if(p->state != TASK_STOPPED)
+	{
+		current->state = tid*10 + TASK_UNINTERRUPTIBLE;
 		schedule();
 	}
-	// printk("Join thread retval:%d\n",current->thread_retval[tid]);
-	put_fs_long(current->thread_retval[tid],(unsigned long*)value_ptr);
+	// printk("exit_code:%d\n",task[nr]->thread[tid-1]->exit_code);
+	put_fs_long(p->exit_code,(unsigned long*)value_ptr);
 }
 
 int sys_thread_status(int tid)
 {
-	return current->thread_state[current->thread_inuse]%10;
+	// return current->state;
+	int nr,i;
+	struct task_struct *p = NULL;
+	nr = get_task_nr(current->pid,0);
+	for(i=0;i<NR_THREADS_PER_TASK;i++)
+	{
+		if(task[nr]->thread[i]->tid==tid)
+		{
+			p = task[nr]->thread[i];
+			break;
+		}
+	}
+	if(p == NULL)
+	{
+		printk("BAD BAD: no such thread!\n");
+		return -1;
+	}
+	return p->state;
 }
 
 int sys_thread_gettid()
 {
-	return current->thread_inuse;
+	return current->tid;
 }

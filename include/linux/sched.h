@@ -2,7 +2,7 @@
 #define _SCHED_H
 
 #define NR_TASKS 64
-#define NR_THREADS 64
+#define NR_THREADS_PER_TASK 10
 #define HZ 100
 
 #define FIRST_TASK task[0]
@@ -29,7 +29,8 @@
 
 extern int copy_page_tables(unsigned long from, unsigned long to, long size);
 extern int free_page_tables(unsigned long from, unsigned long size);
-extern int get_task_nr(struct task_struct *p);
+extern int get_task_nr(long pid,long tid);
+extern int find_empty_process(void);
 extern void sched_init(void);
 extern void schedule(void);
 extern void trap_init(void);
@@ -90,7 +91,8 @@ struct task_struct {
 /* various fields */
 	int exit_code;
 	unsigned long start_code,end_code,end_data,brk,start_stack;
-	int thread_number,thread_inuse,thread_state[10],thread_retval[10],thread_counter[10];
+	int tid,tid_num;
+	struct task_struct * thread[10];
 	long pid,father,pgrp,session,leader;
 	unsigned short uid,euid,suid;
 	unsigned short gid,egid,sgid;
@@ -108,16 +110,9 @@ struct task_struct {
 /* ldt for this task 0 - zero 1 - cs 2 - ds&ss */
 	struct desc_struct ldt[3];
 /* tss for this task */
-	struct tss_struct tss[10];
-};
-
-struct tcb_struct{
-	long thread_number;
-	long state;	
-	long counter;
-	long priority;
 	struct tss_struct tss;
 };
+
 /*
  *  INIT_TASK is used to set up the first task table, touch at
  * your own risk!. Base=0, limit=0x9ffff (=640kB)
@@ -126,7 +121,8 @@ struct tcb_struct{
 /* state etc */	{ 0,15,15, \
 /* signals */	0,{{},},0, \
 /* ec,brk... */	0,0,0,0,0,0, \
-/* thread_number...*/ 0,0,{1,0,},{0,0,},{15,0,},\
+/* tid*/ 0,1,\
+/* thread*/  {NULL,},\
 /* pid etc.. */	0,-1,0,0,0, \
 /* uid etc */	0,0,0,0,0,0, \
 /* alarm */	0,0,0,0,0,0, \
@@ -138,12 +134,12 @@ struct tcb_struct{
 /* ldt */	{0x9f,0xc0fa00}, \
 		{0x9f,0xc0f200}, \
 	}, \
-/*tss*/	{{0,PAGE_SIZE+(long)&init_task,0x10,0,0,0,0,(long)&pg_dir,\
+/*tss*/	{0,PAGE_SIZE+(long)&init_task,0x10,0,0,0,0,(long)&pg_dir,\
 	 0,0,0,0,0,0,0,0, \
 	 0,0,0x17,0x17,0x17,0x17,0x17,0x17, \
 	 _LDT(0),0x80000000, \
 		{} \
-	},}, \
+	}, \
 }
 
 extern struct task_struct *task[NR_TASKS];

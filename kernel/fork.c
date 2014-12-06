@@ -83,15 +83,8 @@ int copy_process(int nr,long ebp,long edi,long esi,long gs,long none,
 	p->state = TASK_UNINTERRUPTIBLE;
 	p->pid = last_pid;
 	/*  线程初始化 */
-	p->thread_number = 0;
-	p->thread_inuse = 0;
-	for(i=0;i<10;i++)
-	{
-		p->thread_state[i] = 0;
-		p->thread_retval[i] = 0;
-		p->thread_counter[i] = p->priority;
-	}
-	p->thread_state[0] = 1;
+	p->tid = 0;
+	p->tid_num = 1;
 	/*  ******* */
 	p->father = current->pid;
 	p->counter = p->priority;
@@ -101,29 +94,29 @@ int copy_process(int nr,long ebp,long edi,long esi,long gs,long none,
 	p->utime = p->stime = 0;
 	p->cutime = p->cstime = 0;
 	p->start_time = jiffies;
-	p->tss[0].back_link = 0;
-	p->tss[0].esp0 = PAGE_SIZE + (long) p;
-	p->tss[0].ss0 = 0x10;
-	p->tss[0].eip = eip;
-	p->tss[0].eflags = eflags;
-	p->tss[0].eax = 0;
-	p->tss[0].ecx = ecx;
-	p->tss[0].edx = edx;
-	p->tss[0].ebx = ebx;
-	p->tss[0].esp = esp;
-	p->tss[0].ebp = ebp;
-	p->tss[0].esi = esi;
-	p->tss[0].edi = edi;
-	p->tss[0].es = es & 0xffff;
-	p->tss[0].cs = cs & 0xffff;
-	p->tss[0].ss = ss & 0xffff;
-	p->tss[0].ds = ds & 0xffff;
-	p->tss[0].fs = fs & 0xffff;
-	p->tss[0].gs = gs & 0xffff;
-	p->tss[0].ldt = _LDT(nr);
-	p->tss[0].trace_bitmap = 0x80000000;
+	p->tss.back_link = 0;
+	p->tss.esp0 = PAGE_SIZE + (long) p;
+	p->tss.ss0 = 0x10;
+	p->tss.eip = eip;
+	p->tss.eflags = eflags;
+	p->tss.eax = 0;
+	p->tss.ecx = ecx;
+	p->tss.edx = edx;
+	p->tss.ebx = ebx;
+	p->tss.esp = esp;
+	p->tss.ebp = ebp;
+	p->tss.esi = esi;
+	p->tss.edi = edi;
+	p->tss.es = es & 0xffff;
+	p->tss.cs = cs & 0xffff;
+	p->tss.ss = ss & 0xffff;
+	p->tss.ds = ds & 0xffff;
+	p->tss.fs = fs & 0xffff;
+	p->tss.gs = gs & 0xffff;
+	p->tss.ldt = _LDT(nr);
+	p->tss.trace_bitmap = 0x80000000;
 	if (last_task_used_math == current)
-		__asm__("clts ; fnsave %0"::"m" (p->tss[0].i387));
+		__asm__("clts ; fnsave %0"::"m" (p->tss.i387));
 	if (copy_mem(nr,p)) {
 		task[nr] = NULL;
 		free_page((long) p);

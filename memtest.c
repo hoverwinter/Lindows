@@ -6,11 +6,14 @@
 
 #define MEM_SIZE 0x40000
 
+int global = 1;
+
 int memtest(int times)
 {
 	int i,j,flag=1,tmp,counter=0;
 	unsigned char * p = (unsigned char*) malloc(MEM_SIZE*sizeof(unsigned char));
-	printf("current thread:%d\n",pthread_gettid());
+	printf("current thread:%d test times:%d\n",pthread_gettid(),times);
+	global ++;
 	for(i=0;i<times;i++)
 	{
 		for(j=0;j<MEM_SIZE;j++)
@@ -40,6 +43,7 @@ int memtest(int times)
 			}
 		}
 	}
+
 	pthread_exit(counter);
 	return 0;
 }
@@ -61,13 +65,11 @@ int main()
 		if(strcmp(tmp,"times") == 0)
 		{
 			scanf(" %d",&times);
-			printf("Times:%d\n",times);
 			continue;
 		}
 		if(strcmp(tmp,"thread") == 0)
 		{
 			scanf(" %d",&num);
-			printf("Thread:%d\n",num);
 			continue;
 		}
 		if(strcmp(tmp,"exit") == 0)
@@ -79,16 +81,20 @@ int main()
 			for(i=0;i<num;i++)
 			{
 				pthread_create(&tid[i],memtest,times);
-				/*pthread_join(tid[i],&result[i]);*/
 			}
 			continue;
 		}
 		if(strcmp(tmp,"status") == 0)
 		{
 			for(i=0;i<num;i++)
+			{
 				printf("%d:%d\n",tid[i],pthread_status(tid[i]));
+			}
+			for(i=0;i<num;i++)
+				pthread_join(tid[i],&result[i]);
 			for(i=0;i<num;i++)
 				printf("Result:%d\n",result[i]);
+			printf("global=%d\n",global);
 			continue;
 		}
 		if(strcmp(tmp,"abort") == 0)
@@ -97,6 +103,8 @@ int main()
 			{
 				pthread_cancel(tid[i]);
 			}
+			num = 1;
+			times = 1;
 			continue;
 		}
 	}

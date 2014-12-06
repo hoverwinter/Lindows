@@ -27,7 +27,7 @@ void show_task(int nr,struct task_struct * p)
 {
 	int i,j = 4096-sizeof(struct task_struct);
 
-	printk("%d: pid=%d, state=%d, ",nr,p->pid,p->state);
+	printk("%d: pid=%d, tid=%d, state=%d, ",nr,p->pid,p->tid,p->state);
 	i=0;
 	while (i<j && !((char *)(p+1))[i])
 		i++;
@@ -80,11 +80,11 @@ void math_state_restore()
 		return;
 	__asm__("fwait");
 	if (last_task_used_math) {
-		__asm__("fnsave %0"::"m" (last_task_used_math->tss[0].i387));
+		__asm__("fnsave %0"::"m" (last_task_used_math->tss.i387));
 	}
 	last_task_used_math=current;
 	if (current->used_math) {
-		__asm__("frstor %0"::"m" (current->tss[0].i387));
+		__asm__("frstor %0"::"m" (current->tss.i387));
 	} else {
 		__asm__("fninit"::);
 		current->used_math=1;
@@ -142,23 +142,24 @@ void schedule(void)
 			}
 	}
 	/*这部分是线程调度*/
-	// printk("Current thread:%d\n",current->thread_inuse);
-	thread_schedule(task[next]);
-	if(task[next]->thread_inuse != 0 && task[next]->pid == current->pid)
-	{
-		// printk("\n\t***HERE schedule(): next=%d****\n",next);
-		set_tss_desc(gdt+(next<<1)+FIRST_TSS_ENTRY,&(task[next]->tss[task[next]->thread_inuse]));
-		set_ldt_desc(gdt+(next<<1)+FIRST_LDT_ENTRY,&(task[next]->ldt));
-		/*线程切换*/
-		__asm__(
-		"movw %%dx,%1\n\t" 
-		"ljmp *%0\n\t" 
-		::"m" (*&__tmp.a),"m" (*&__tmp.b), 
-		"d" (_TSS(next))); 
-	}else
-	{
+	// thread_schedule(task[next]);
+	// if(task[next]->pid == current->pid && task[next]->thread_inuse!=task[next]->thread_touse)
+	// {
+	// 	// printk("Thread in use:%d to use:%d\n",current->thread_inuse,current->thread_touse);
+	// 	// printk("\n\t***HERE schedule(): next=%d****\n",next);
+	// 	set_tss_desc(gdt+(next<<1)+FIRST_TSS_ENTRY,&(task[next]->tss[task[next]->thread_touse]));
+	// 	set_ldt_desc(gdt+(next<<1)+FIRST_LDT_ENTRY,&(task[next]->ldt));
+	// 	task[next]->thread_inuse = task[next]->thread_touse;
+	// 	/*线程切换*/
+	// 	__asm__(
+	// 	"movw %%dx,%1\n\t" 
+	// 	"ljmp *%0\n\t" 
+	// 	::"m" (*&__tmp.a),"m" (*&__tmp.b), 
+	// 	"d" (_TSS(next))); 
+	// }else
+	// {
 		switch_to(next);
-	}
+	// }
 }
 
 int sys_pause(void)
@@ -349,11 +350,9 @@ void do_timer(long cpl)
 	}
 	if (current_DOR & 0xf0)
 		do_floppy_timer();
-	if ((--current->counter)>0 && 
-		(--current->thread_counter[current->thread_inuse])>0
-		) return;
+	if ((--current->counter)>0) return;
 	current->counter=0;
-	current->thread_counter[current->thread_inuse] = 0;
+	// current->thread_counter[current->thread_inuse] = 0;
 	if (!cpl) return;
 	schedule();
 }
