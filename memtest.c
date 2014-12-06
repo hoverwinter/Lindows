@@ -4,16 +4,19 @@
 #include <string.h>
 #include <time.h>
 
-#define MEM_SIZE 0x40000
+#define MEM_SIZE 0x20000
+#define MAX_TH_NUM 10
 
-int global = 1;
+unsigned long test_addr[MAX_TH_NUM];
+int times;
+int tid[MAX_TH_NUM];
+int result[MAX_TH_NUM];
 
-int memtest(int times)
+int memtest(unsigned long start_addr)
 {
 	int i,j,flag=1,tmp,counter=0;
-	unsigned char * p = (unsigned char*) malloc(MEM_SIZE*sizeof(unsigned char));
-	printf("current thread:%d test times:%d\n",pthread_gettid(),times);
-	global ++;
+	unsigned char * p;
+	p = (unsigned char*)start_addr;
 	for(i=0;i<times;i++)
 	{
 		for(j=0;j<MEM_SIZE;j++)
@@ -43,19 +46,24 @@ int memtest(int times)
 			}
 		}
 	}
-
 	pthread_exit(counter);
 	return 0;
 }
 
 int main()
 {
-	int times,num,i =0;
-	char tmp[10];
-	int tid[10];
-	int result[10];
-	times = num = 1;
-	printf("Usage:\n");
+	int num,i = 0;
+	char tmp[MAX_TH_NUM];
+	times = 1;
+	num = 2;
+	printf("Usage:\n"
+		"\tgo: start test\n"
+		"\tabort: cancel thread\n"
+		"\tstatus: show test status\n"
+		"\tthread n: create n threads to test\n"
+		"\ttimes n: each mem unit tests n times\n"
+		"Default: 1 times and 2 threads\n"
+		);
 	fflush(stdout);
 	while(1)
 	{
@@ -80,7 +88,8 @@ int main()
 		{
 			for(i=0;i<num;i++)
 			{
-				pthread_create(&tid[i],memtest,times);
+				test_addr[i] = (unsigned long) malloc(MEM_SIZE*sizeof(unsigned char));
+				pthread_create(&tid[i],memtest,test_addr[i]);
 			}
 			continue;
 		}
@@ -88,26 +97,47 @@ int main()
 		{
 			for(i=0;i<num;i++)
 			{
-				printf("%d:%d\n",tid[i],pthread_status(tid[i]));
+				printf("Thread %d :  ",tid[i]);
+				switch(pthread_status(tid[i]))
+				{
+					case -1: 
+						printf("is to be created\n");
+						break;
+					case 0: 
+						printf("is running\n");
+						break;
+					case 1:
+						printf("is waiting\n");
+						break;
+					case 2:
+						printf("is waiting\n");
+						break;
+					case 4:
+						printf("is stopped\n");
+						pthread_join(tid[i],&result[i]);
+						printf("\tTest Addr: %X Result: %d/%d(OK)\n",test_addr[i],result[i],MEM_SIZE);
+						break;
+					case 5:
+						printf("is canceled\n");
+						break;
+					default:
+						printf("no such thread\n");
+						break;
+				}
 			}
-			for(i=0;i<num;i++)
-				pthread_join(tid[i],&result[i]);
-			for(i=0;i<num;i++)
-				printf("Result:%d\n",result[i]);
-			printf("global=%d\n",global);
 			continue;
 		}
 		if(strcmp(tmp,"abort") == 0)
 		{
 			for(i=0;i<num;i++)
 			{
-				pthread_cancel(tid[i]);
+				if(tid[i])
+				{
+					pthread_cancel(tid[i]);
+				}
 			}
-			num = 1;
-			times = 1;
 			continue;
 		}
 	}
 	
 }
-

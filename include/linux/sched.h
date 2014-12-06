@@ -22,6 +22,7 @@
 #define TASK_UNINTERRUPTIBLE	2
 #define TASK_ZOMBIE		3
 #define TASK_STOPPED		4
+#define THREAD_CANCELED 5
 
 #ifndef NULL
 #define NULL ((void *) 0)

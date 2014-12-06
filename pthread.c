@@ -4,9 +4,9 @@
 #include <stdlib.h>
 
 _syscall2(int,make_thread,fn_ptr,func,int,sp);
-_syscall2(void,thread_join,int,tid,int*,retval);
-_syscall1(void,thread_exit,int,retval);
-_syscall1(void,thread_cancel,int,tid);
+_syscall2(int,thread_join,int,tid,int*,retval);
+_syscall1(int,thread_exit,int,retval);
+_syscall1(int,thread_cancel,int,tid);
 _syscall1(int,thread_status,int,tid);
 _syscall0(int,thread_gettid);
 

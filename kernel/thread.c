@@ -1,3 +1,19 @@
+/*
+ *  linux/kernel/thread.c
+ *
+ *  (C) 2014  Hover Winter (carpela@163.com)
+ *  https://github.com/traitorousfc
+ *  MIT License   Harbin Institute of Technology(HIT)
+ *
+ */
+
+/*
+ * 'thread.c' is the main kernel file. It contains the implement of multi-thread
+ * Thread number is limited to 10. And obviously part of POSIX thread!
+ * Thread is the basic schedule unit.
+ * It takes me 2 days to finish the whole part and memtest.c!
+ */
+
 #include <linux/sched.h>
 #include <linux/kernel.h>
 #include <asm/segment.h>
@@ -88,14 +104,20 @@ int init_tss(int eax,long ebp,long edi,long esi,long gs,long none,
 	return p->tid;
 }
 
-void sys_thread_cancel(int tid)
+int sys_thread_cancel(int tid)
 {
+	cli();
 	int nr,i;
 	struct task_struct *p;
 	if(tid == current->tid)
 	{
 		printk("BAD BAD: try to cancel self!\n");
 		return;
+	}
+	if(tid == 0)
+	{
+		printk("BAD BAD: try to cancel Main Thread!\n");
+		return -1;
 	}
 	nr = get_task_nr(current->pid,0);
 	for(i=0;i<NR_THREADS_PER_TASK;i++)
@@ -105,15 +127,16 @@ void sys_thread_cancel(int tid)
 			p = task[nr]->thread[i];
 		}
 	}
-	p->state = TASK_STOPPED;
-	task[nr]->tid_num -= 1;
-	nr = get_task_nr(current->pid,current->tid);
+	p->state = THREAD_CANCELED;
+	nr = get_task_nr(current->pid,tid);
 	task[nr] = NULL;
-	printk("PID:%d\tTID:%d canceled\n",current->pid,current->tid);
+	// printk("PID:%d\tTID:%d canceled\n",current->pid,tid);
+	sti();
 	schedule();
+	return 0;
 }
 
-void sys_thread_exit(int value)
+int sys_thread_exit(int value)
 {
 	int nr,i;
 	if(current->tid == 0)
@@ -131,14 +154,14 @@ void sys_thread_exit(int value)
 				task[nr]->thread[i]->state = TASK_RUNNING;
 		}
 	}
-	task[nr]->tid_num -= 1;
 	nr = get_task_nr(current->pid,current->tid);
 	task[nr] = NULL;
-	printk("PID:%d\tTID:%d exit\n",current->pid,current->tid);
+	// printk("PID:%d\tTID:%d exit\n",current->pid,current->tid);
 	schedule();
+	return 0;
 }
 
-void sys_thread_join(int tid, int* value_ptr)
+int sys_thread_join(int tid, int* value_ptr)
 {
 	int nr,i;
 	struct task_struct *p;
@@ -154,8 +177,8 @@ void sys_thread_join(int tid, int* value_ptr)
 	}
 	if(p == NULL)
 	{
-		printk("BAD BAD: try to wait for non-existing thread!\n");
-		return;
+		// printk("BAD BAD: try to wait for non-existing thread!\n");
+		return -1;
 	}
 	if(p->state != TASK_STOPPED)
 	{
@@ -164,6 +187,7 @@ void sys_thread_join(int tid, int* value_ptr)
 	}
 	// printk("exit_code:%d\n",task[nr]->thread[tid-1]->exit_code);
 	put_fs_long(p->exit_code,(unsigned long*)value_ptr);
+	return 0;
 }
 
 int sys_thread_status(int tid)
@@ -182,7 +206,7 @@ int sys_thread_status(int tid)
 	}
 	if(p == NULL)
 	{
-		printk("BAD BAD: no such thread!\n");
+		// printk("BAD BAD: no such thread!\n");
 		return -1;
 	}
 	return p->state;

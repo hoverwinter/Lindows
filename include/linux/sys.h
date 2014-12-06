@@ -71,9 +71,9 @@ extern int sys_ssetmask();
 extern int sys_setreuid();
 extern int sys_setregid();
 extern int sys_make_thread();
-extern void sys_thread_cancel();
-extern void sys_thread_exit();
-extern void sys_thread_join();
+extern int sys_thread_cancel();
+extern int sys_thread_exit();
+extern int sys_thread_join();
 extern int sys_thread_status();
 extern int sys_thread_gettid();
 
